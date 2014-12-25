@@ -30,6 +30,8 @@
 #import <Foundation/Foundation.h>
 #import "LocalizableScanner.h"
 
+void printHelp();
+
 int main(int argc, const char * argv[]) {
     @autoreleasepool {
         NSArray *paramNames = @[@"-p", @"-m", @"-l"];
@@ -43,22 +45,17 @@ int main(int argc, const char * argv[]) {
                 continue;
             }
             if(ps.count == 1 && [ps[0] isEqualToString:@"-h"]){
-                printf("LocalizableScan [-p=dir] [-m=method] [-l=file] [-v]\n");
-                printf("\n");
-                printf("-p=dir      scan dir\n");
-                printf("-m=method   localizable string method used in code,\n");
-                printf("            default is \"NSLocalizedString\".\n");
-                printf("-l=file     localizable string file path,\n");
-                printf("            default to search Localizable.strings file in scan dir.\n");
-                printf("-v          verbose mode.\n");
+                printHelp();
                 return 0;
             }
             if(ps.count != 2){
                 printf("Unrecognized option:%s", argv[i]);
+                printHelp();
                 return 0;
             }
             if([paramNames containsObject:ps[0]] == NO){
                 printf("Unrecognized option:%s", argv[i]);
+                printHelp();
                 return 0;
             }
             [params setObject:ps[1] forKey:ps[0]];
@@ -72,6 +69,21 @@ int main(int argc, const char * argv[]) {
         [[LocalizableScanner scanner] scanPath:path withLocalizableFile:localizableStringFile withLocalizableMethod:method];
     }
     return 0;
+}
+
+void printHelp(){
+    printf("\n");
+    printf("Useage:\n");
+    printf("\n");
+    printf("\t$ LocalizableScan [-p=<dir>] [-m=<method>] [-l=<path>] [-v]\n");
+    printf("\n");
+    printf("\t-p=<dir>      scan dir\n");
+    printf("\t-m=<method>   localizable string method used in code,\n");
+    printf("\t              default is \"NSLocalizedString\".\n");
+    printf("\t-l=<path>     localizable string file path,\n");
+    printf("\t              default to search Localizable.strings file in scan dir.\n");
+    printf("\t-v            verbose mode.\n");
+    printf("\n");
 }
 
 
