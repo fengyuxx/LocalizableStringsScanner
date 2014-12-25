@@ -65,7 +65,7 @@ int main(int argc, const char * argv[]) {
         NSString *method = [params objectForKey:paramNames[1]];
         NSString *localizableStringFile = [params objectForKey:paramNames[2]];
         
-        printf("============ Localizable Scan ===========\n");
+        printf("============ Localizable Strings Scan ===========\n");
         [[LocalizableScanner scanner] scanPath:path withLocalizableFile:localizableStringFile withLocalizableMethod:method];
     }
     return 0;
@@ -75,7 +75,7 @@ void printHelp(){
     printf("\n");
     printf("Useage:\n");
     printf("\n");
-    printf("\t$ LocalizableScan [-p=<dir>] [-m=<method>] [-l=<path>] [-v]\n");
+    printf("\t$ LocalizableStringsScanner [-p=<dir>] [-m=<method>] [-l=<path>] [-v]\n");
     printf("\n");
     printf("\t-p=<dir>      scan dir\n");
     printf("\t-m=<method>   localizable string method used in code,\n");
