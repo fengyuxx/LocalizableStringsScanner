@@ -29,10 +29,12 @@
 
 #import <Foundation/Foundation.h>
 
-#define FileScannerNameKey CFBridgingRelease(kCFURLNameKey)
-#define FileScannerPathKey CFBridgingRelease(kCFURLPathKey)
-#define FileScannerIsDirKey CFBridgingRelease(kCFURLIsDirectoryKey)
+typedef NS_OPTIONS(NSUInteger, FileScannerOptions) {
+    FileScannerOptionsIncludeDescendants = 1UL << 0,
+    FileScannerOptionsFindDirectory = 1UL << 1,
+};
 
 @interface FileScanner : NSObject
-- (void)enumeratorAtPath:(NSString *)path fileFinder:(void(^)(NSURL *url, BOOL *stop))finder;
+- (void)enumeratorAtPath:(NSString *)path fileFinder:(void(^)(NSURL *url, BOOL isDirectory, BOOL *stop))finder;
+- (void)enumeratorAtPath:(NSString *)path options:(FileScannerOptions)options fileFinder:(void(^)(NSURL *url, BOOL isDirectory, BOOL *stop))finder;
 @end

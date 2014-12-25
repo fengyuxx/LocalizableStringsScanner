@@ -36,6 +36,7 @@
 @property (nonatomic, strong) FileScanner *fileScanner;
 @property (nonatomic, strong) NSMutableArray *localizableStrings;
 @property (nonatomic, strong) NSMutableArray *missStrings;
+@property (nonatomic, assign) NSUInteger matchMethods;
 @end
 
 @implementation LocalizableScanner
@@ -74,7 +75,12 @@ static LocalizableScanner *_scanner;
         path = [[NSFileManager defaultManager] currentDirectoryPath];
     }
     self.path = path;
-    printf("begin scan:%s\n", [path cStringUsingEncoding:NSUTF8StringEncoding]);
+    printf("Begin scan: %s\n", [path cStringUsingEncoding:NSUTF8StringEncoding]);
+    
+    if([self isObjectiveCProjectDirectory] == NO){
+        printf("[ERROR] Specified path is not a objective c project directory.\n");
+        exit(0);
+    }
     
     if(file == nil){
         file = [self findDefaultLocalizableStringFile];
@@ -83,16 +89,18 @@ static LocalizableScanner *_scanner;
         printf("[ERROR] No find Localizable.strings, assign localizable file with -l option.\n");
         return;
     }
+    [self loadLocalizableStringsFile:file];
     
     if(method == nil){
         method = @"NSLocalizedString";
     }
+    printf("Localizable method: %s\n", [method cStringUsingEncoding:NSUTF8StringEncoding]);
     
-    [self loadLocalizableStringsFile:file];
-    
+    self.matchMethods = 0;
     self.missStrings = [NSMutableArray array];
     __block NSUInteger count = 0;
-    [self.fileScanner enumeratorAtPath:path fileFinder:^(NSURL *url, BOOL *stop) {
+    NSInteger options = FileScannerOptionsIncludeDescendants;
+    [self.fileScanner enumeratorAtPath:path options:options fileFinder:^(NSURL *url, BOOL isDirectory, BOOL *stop) {
         if([url.path.pathExtension isEqualToString:@"m"] == NO) return;
         if([url.pathComponents containsObject:@"Pods"]) return;
         if(self.verbose) printf(".%s\n", [[url.path stringByReplacingOccurrencesOfString:path withString:@""] cStringUsingEncoding:NSUTF8StringEncoding]);
@@ -101,25 +109,27 @@ static LocalizableScanner *_scanner;
         }
         count++;
         if(self.verbose == NO){
-            if(count % 100 == 0){
+            if(count % 10 == 0){
                 printf(".");
             }
-            if(count % 1000 == 0){
+            if(count % 100 == 0){
                 printf("\n");
             }
         }
     }];
-    printf("\n\n\n\n======================== miss string (%d) =========================\n", (int)self.missStrings.count);
+    printf("\n\nMatch Methods: %ld\n", (long)self.matchMethods);
+    printf("\n======================== miss string (%ld) =========================\n", (long)self.missStrings.count);
     [self.missStrings enumerateObjectsUsingBlock:^(NSString *string, NSUInteger idx, BOOL *stop) {
         printf("%s\n", [string cStringUsingEncoding:NSUTF8StringEncoding]);
     }];
-    printf("\n\n");
+    printf("\n");
 }
 
 - (NSString *)findDefaultLocalizableStringFile{
     if(self.verbose) printf("find default localizable string file: Localizable.strings ...\n");
     __block NSString *path = nil;
-    [self.fileScanner enumeratorAtPath:self.path fileFinder:^(NSURL *url, BOOL *stop) {
+    NSInteger options = FileScannerOptionsIncludeDescendants;
+    [self.fileScanner enumeratorAtPath:self.path options:options fileFinder:^(NSURL *url, BOOL isDirectory, BOOL *stop) {
         NSString *name = [url.path lastPathComponent];
         if([name isEqualToString:@"Localizable.strings"]){
             path = [url path];
@@ -132,7 +142,7 @@ static LocalizableScanner *_scanner;
 - (void)loadLocalizableStringsFile:(NSString *)file{
     self.localizableStrings = [NSMutableArray array];
     
-    printf("Load localizable strings file:%s\n", [[file stringByReplacingOccurrencesOfString:self.path withString:@""] cStringUsingEncoding:NSUTF8StringEncoding]);
+    printf("Load localizable strings file: %s\n", [[file stringByReplacingOccurrencesOfString:self.path withString:@""] cStringUsingEncoding:NSUTF8StringEncoding]);
     
     __block BOOL inComment = NO;
     __block NSUInteger lineNo = 0;
@@ -180,17 +190,26 @@ static LocalizableScanner *_scanner;
             [clearLine enumerateStringsMatchedByRegex:regex usingBlock:^(NSInteger captureCount, NSString *const __unsafe_unretained *capturedStrings, const NSRange *capturedRanges, volatile BOOL *const stop) {
                 NSString *string = capturedStrings[1];
                 if([self.localizableStrings containsObject:string]){
-                    if(self.verbose) printf("\tlocalizable string:%s\n", [string cStringUsingEncoding:NSUTF8StringEncoding]);
+                    if(self.verbose) printf("\tlocalizable string: %s\n", [string cStringUsingEncoding:NSUTF8StringEncoding]);
                 }else{
                     if([self.missStrings containsObject:string] == NO){
                         [self.missStrings addObject:string];
                     }
                 }
+                self.matchMethods++;
             }];
         }
     }];
-    
-    
+}
+
+- (BOOL)isObjectiveCProjectDirectory{
+    __block BOOL result = NO;
+    NSInteger options = FileScannerOptionsFindDirectory;
+    [self.fileScanner enumeratorAtPath:self.path options:options fileFinder:^(NSURL *url, BOOL isDirectory, BOOL *stop) {
+        result = [url.path.pathExtension isEqualToString:@"xcodeproj"];
+        *stop = result;
+    }];
+    return result;
 }
 
 

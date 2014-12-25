@@ -32,12 +32,17 @@
 
 @implementation FileScanner
 
-- (void)enumeratorAtPath:(NSString *)path fileFinder:(void(^)(NSURL *url, BOOL *stop))finder{
-    NSArray *keys = @[FileScannerNameKey,
-                      FileScannerPathKey,
-                      FileScannerIsDirKey,];
-    
-    NSDirectoryEnumerator *en = [[NSFileManager defaultManager] enumeratorAtURL:[NSURL fileURLWithPath:path] includingPropertiesForKeys:keys options:NSDirectoryEnumerationSkipsHiddenFiles errorHandler:^BOOL(NSURL *url, NSError *error) {
+- (void)enumeratorAtPath:(NSString *)path fileFinder:(void(^)(NSURL *url, BOOL isDirectory,  BOOL *stop))finder{
+    [self enumeratorAtPath:path options:0 fileFinder:finder];
+}
+
+
+- (void)enumeratorAtPath:(NSString *)path options:(FileScannerOptions)options fileFinder:(void(^)(NSURL *url, BOOL isDirectory, BOOL *stop))finder{
+    NSUInteger opts = NSDirectoryEnumerationSkipsHiddenFiles;
+    if((options & FileScannerOptionsIncludeDescendants) == 0){
+        opts = opts | NSDirectoryEnumerationSkipsSubdirectoryDescendants;
+    }
+    NSDirectoryEnumerator *en = [[NSFileManager defaultManager] enumeratorAtURL:[NSURL fileURLWithPath:path] includingPropertiesForKeys:nil options:opts errorHandler:^BOOL(NSURL *url, NSError *error) {
         NSLog(@"enumerator error\n%@\nat:%@", error, url);
         exit(0);
         return NO;
@@ -49,9 +54,9 @@
     while(subpath = [en nextObject]){
         [[NSFileManager defaultManager] fileExistsAtPath:[subpath path] isDirectory:&isDir];
         if(isDir){
-            [self enumeratorAtPath:[subpath path] fileFinder:finder];
+            if(finder && (options & FileScannerOptionsFindDirectory) != 0) finder(subpath, isDir, &stop);
         }else{
-            if(finder) finder(subpath, &stop);
+            if(finder) finder(subpath, isDir, &stop);
         }
         if(stop) break;
     }
